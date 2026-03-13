@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaos Lab: 6 Butterfly Effects</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f1f5f9; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        header { text-align: center; margin-bottom: 40px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #334155; }
+        canvas { width: 100% !important; border-radius: 8px; background: #000; }
+        h3 { color: var(--accent); margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .stats { font-family: monospace; font-size: 0.9em; background: #000; padding: 10px; border-radius: 4px; color: #10b981; }
+        button { background: var(--accent); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>The Butterfly Effect Laboratory</h1>
+    <p>Visualizing Chaos Theory across 6 distinct domains.</p>
+</header>
+
+<div class="grid">
+    <div class="card">
+        <h3>1. Meteorological Chaos (Lorenz)</h3>
+        <p>Two worlds start with a 0.001 difference. Watch them diverge.</p>
+        <canvas id="lorenzCanvas" height="300"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>2. Biological Chaos (Population)</h3>
+        <button onclick="runLogistic()">Step 100 Generations</button>
+        <canvas id="logisticChart" height="200"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>3. Mechanical Chaos (Physics)</h3>
+        <p>Two pendulums with 0.1° starting difference.</p>
+        <canvas id="pendulumCanvas" height="300"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>4. Computational Chaos (Precision)</h3>
+        <div class="stats" id="floatDrift">Calculating...</div>
+        <p>A rounding error of $10^{-16}$ compounding over 1,000 operations.</p>
+    </div>
+
+    <div class="card">
+        <h3>5. Geometric Chaos (Fractals)</h3>
+        <canvas id="mandelbrotCanvas" height="300"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>6. Evolutionary Chaos (Genetics)</h3>
+        <button onclick="runGenetic()">Rerun Evolution</button>
+        <canvas id="geneticChart" height="200"></canvas>
+    </div>
+</div>
+
+<script>
+    // --- 1. LORENZ ATTRACTOR ---
+    const lorenzCtx = document.getElementById('lorenzCanvas').getContext('2d');
+    let x1=1, y1=1, z1=1, x2=1, y2=1, z2=1.001; 
+    const sigma=10, rho=28, beta=8/3, dt=0.01;
+
+    function drawLorenz() {
+        for(let i=0; i<5; i++) {
+            let dx1 = (sigma * (y1 - x1)) * dt;
+            let dy1 = (x1 * (rho - z1) - y1) * dt;
+            let dz1 = (x1 * y1 - beta * z1) * dt;
+            x1 += dx1; y1 += dy1; z1 += dz1;
+
+            let dx2 = (sigma * (y2 - x2)) * dt;
+            let dy2 = (x2 * (rho - z2) - y2) * dt;
+            let dz2 = (x2 * y2 - beta * z2) * dt;
+            x2 += dx2; y2 += dy2; z2 += dz2;
+
+            lorenzCtx.fillStyle = 'blue';
+            lorenzCtx.fillRect(150 + x1*5, 150 - z1*3, 1, 1);
+            lorenzCtx.fillStyle = 'red';
+            lorenzCtx.fillRect(150 + x2*5, 150 - z2*3, 1, 1);
+        }
+        requestAnimationFrame(drawLorenz);
+    }
+    drawLorenz();
+
+    // --- 2. LOGISTIC MAP ---
+    let logisticChart;
+    function runLogistic() {
+        const r = 3.9;
+        let x1 = 0.5, x2 = 0.500001;
+        const data1 = [], data2 = [], labels = [];
+        for(let i=0; i<60; i++) {
+            x1 = r * x1 * (1 - x1);
+            x2 = r * x2 * (1 - x2);
+            data1.push(x1); data2.push(x2);
+            labels.push(i);
+        }
+        if(logisticChart) logisticChart.destroy();
+        logisticChart = new Chart(document.getElementById('logisticChart'), {
+            type: 'line',
+            data: { labels, datasets: [
+                {label: 'World A', data: data1, borderColor: '#38bdf8', borderWidth: 1},
+                {label: 'World B', data: data2, borderColor: '#f87171', borderWidth: 1}
+            ]}
+        });
+    }
+    runLogistic();
+
+    // --- 3. DOUBLE PENDULUM (Simplified Animation) ---
+    const penCtx = document.getElementById('pendulumCanvas').getContext('2d');
+    let a1 = Math.PI/2, a2 = Math.PI/2, a1_v = 0, a2_v = 0;
+    let b1 = Math.PI/2, b2 = Math.PI/2 + 0.001, b1_v = 0, b2_v = 0;
+    const g = 1;
+
+    function drawPendulum() {
+        penCtx.fillStyle = 'rgba(0,0,0,0.05)';
+        penCtx.fillRect(0,0,400,300);
+        
+        // Physics update (simplified)
+        a1_v += -0.01 * Math.sin(a1); a1 += a1_v;
+        a2_v += -0.01 * Math.sin(a2); a2 += a2_v;
+        b1_v += -0.01 * Math.sin(b1); b1 += b1_v;
+        b2_v += -0.01 * Math.sin(b2); b2 += b2_v;
+
+        penCtx.strokeStyle = 'blue';
+        penCtx.beginPath(); penCtx.moveTo(200, 50); penCtx.lineTo(200+Math.sin(a1)*60, 50+Math.cos(a1)*60); penCtx.stroke();
+        penCtx.strokeStyle = 'red';
+        penCtx.beginPath(); penCtx.moveTo(200, 50); penCtx.lineTo(200+Math.sin(b1)*60, 50+Math.cos(b1)*60); penCtx.stroke();
+        
+        requestAnimationFrame(drawPendulum);
+    }
+    drawPendulum();
+
+    // --- 4. FLOAT DRIFT ---
+    let sum = 0;
+    for(let i=0; i<1000; i++) sum += 0.1;
+    document.getElementById('floatDrift').innerHTML = `
+        Loop: Add 0.1, 1000 times<br>
+        Result: ${sum}<br>
+        Expected: 100.0000...<br>
+        Drift Error: ${Math.abs(100 - sum).toFixed(16)}
+    `;
+
+    // --- 5. MANDELBROT ---
+    const mCtx = document.getElementById('mandelbrotCanvas').getContext('2d');
+    for(let x=0; x<400; x++) {
+        for(let y=0; y<300; y++) {
+            let cx = (x - 250) / 100, cy = (y - 150) / 100;
+            let zx = 0, zy = 0, i = 0;
+            while(zx*zx + zy*zy < 4 && i < 20) {
+                let tmp = zx*zx - zy*zy + cx;
+                zy = 2*zx*zy + cy; zx = tmp; i++;
+            }
+            mCtx.fillStyle = `hsl(200, 100%, ${i * 5}%)`;
+            mCtx.fillRect(x,y,1,1);
+        }
+    }
+
+    // --- 6. GENETIC DRIFT ---
+    let genChart;
+    function runGenetic() {
+        let freq = 0.5;
+        const data = [], labels = [];
+        for(let i=0; i<100; i++) {
+            let nextGen = 0;
+            for(let j=0; j<100; j++) if(Math.random() < freq) nextGen++;
+            freq = nextGen / 100;
+            data.push(freq); labels.push(i);
+        }
+        if(genChart) genChart.destroy();
+        genChart = new Chart(document.getElementById('geneticChart'), {
+            type: 'line',
+            data: { labels, datasets: [{label: 'Allele Frequency', data: data, borderColor: '#10b981'}]}
+        });
+    }
+    runGenetic();
+</script>
+
+</body>
+</html>
